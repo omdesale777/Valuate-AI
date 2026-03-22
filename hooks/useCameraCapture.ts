@@ -50,7 +50,6 @@ export function useCameraCapture(): UseCameraCaptureReturn {
     error,
     triggerCapture,
     clearCapture,
-    // @ts-expect-error – attaching onChange externally
-    fileInputRef: Object.assign(fileInputRef, { onChange: handleFileChange }),
+    fileInputRef: Object.assign(fileInputRef, { onChange: handleFileChange }) as React.RefObject<HTMLInputElement>,
   };
 }
