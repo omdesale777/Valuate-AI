@@ -4,16 +4,23 @@ import { useState, useEffect } from "react";
 import { Menu, X, Wallet, Zap } from "lucide-react";
 import { cn } from "@/lib/formatters";
 
-const navLinks = [
-  { label: "Dashboard", href: "#" },
-  { label: "Valuations", href: "#live-feed" },
-  { label: "Insights", href: "#neighborhood" },
-  { label: "Brokers", href: "#" },
-];
-
-export default function Navbar() {
+export default function Navbar({
+  onDashboardClick,
+  showDashboardLink = false,
+}: {
+  onDashboardClick?: () => void;
+  showDashboardLink?: boolean;
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // navLinks defined INSIDE the component so onDashboardClick is in scope
+  const navLinks = [
+    { label: "Dashboard", href: "#", onClick: onDashboardClick },
+    { label: "Valuations", href: "#live-feed", onClick: undefined },
+    { label: "Insights", href: "#neighborhood", onClick: undefined },
+    { label: "Brokers", href: "#", onClick: undefined },
+  ];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -48,10 +55,15 @@ export default function Navbar() {
         {/* Center links */}
         <div className="hidden lg:flex items-center gap-6 flex-1">
           {navLinks.map((link) => (
-            <a
+            
               key={link.label}
               href={link.href}
-              className="text-sm text-[var(--text-secondary)] hover:text-white transition-colors duration-200"
+              onClick={
+                link.onClick
+                  ? (e) => { e.preventDefault(); link.onClick?.(); }
+                  : undefined
+              }
+              className="text-sm text-[var(--text-secondary)] hover:text-white transition-colors duration-200 cursor-pointer"
             >
               {link.label}
             </a>
@@ -60,7 +72,6 @@ export default function Navbar() {
 
         {/* Right */}
         <div className="ml-auto flex items-center gap-3">
-          {/* Live badge */}
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[10px] font-geist-mono text-emerald-400 font-bold tracking-wider">LIVE</span>
@@ -75,7 +86,6 @@ export default function Navbar() {
             U
           </div>
 
-          {/* Mobile toggle */}
           <button
             className="lg:hidden text-[var(--text-secondary)] hover:text-white transition-colors ml-1"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -90,11 +100,14 @@ export default function Navbar() {
         <div className="fixed inset-0 z-40 pt-16 bg-[#0a0a0a]/95 backdrop-blur-xl lg:hidden">
           <div className="flex flex-col p-6 gap-4">
             {navLinks.map((link) => (
-              <a
+              
                 key={link.label}
                 href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className="text-lg text-[var(--text-secondary)] hover:text-white py-2 border-b border-[var(--border-subtle)] transition-colors"
+                onClick={(e) => {
+                  if (link.onClick) { e.preventDefault(); link.onClick(); }
+                  setMobileOpen(false);
+                }}
+                className="text-lg text-[var(--text-secondary)] hover:text-white py-2 border-b border-[var(--border-subtle)] transition-colors cursor-pointer"
               >
                 {link.label}
               </a>
