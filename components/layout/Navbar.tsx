@@ -14,7 +14,6 @@ export default function Navbar({
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // navLinks defined INSIDE the component so onDashboardClick is in scope
   const navLinks = [
     { label: "Dashboard", href: "#", onClick: onDashboardClick },
     { label: "Valuations", href: "#live-feed", onClick: undefined },
@@ -38,7 +37,6 @@ export default function Navbar({
             : "bg-transparent"
         )}
       >
-        {/* Logo */}
         <a href="#" className="flex items-center gap-2.5 mr-8">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
             <rect x="2" y="14" width="5" height="12" rx="1" fill="#3b82f6" />
@@ -52,17 +50,12 @@ export default function Navbar({
           </div>
         </a>
 
-        {/* Center links */}
         <div className="hidden lg:flex items-center gap-6 flex-1">
           {navLinks.map((link) => (
             
               key={link.label}
               href={link.href}
-              onClick={
-                link.onClick
-                  ? (e) => { e.preventDefault(); link.onClick?.(); }
-                  : undefined
-              }
+              onClick={link.onClick ? (e) => { e.preventDefault(); link.onClick?.(); } : undefined}
               className="text-sm text-[var(--text-secondary)] hover:text-white transition-colors duration-200 cursor-pointer"
             >
               {link.label}
@@ -70,11 +63,10 @@ export default function Navbar({
           ))}
         </div>
 
-        {/* Right */}
         <div className="ml-auto flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/20 bg-emerald-500/5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] font-geist-mono text-emerald-400 font-bold tracking-wider">LIVE</span>
+            <span className="text-[10px] text-emerald-400 font-bold tracking-wider">LIVE</span>
           </div>
 
           <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] text-sm text-[var(--text-secondary)] hover:text-white hover:border-[var(--border-accent)] transition-all">
@@ -95,7 +87,6 @@ export default function Navbar({
         </div>
       </nav>
 
-      {/* Mobile menu */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 pt-16 bg-[#0a0a0a]/95 backdrop-blur-xl lg:hidden">
           <div className="flex flex-col p-6 gap-4">
