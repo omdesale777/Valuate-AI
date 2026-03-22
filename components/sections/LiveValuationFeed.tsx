@@ -17,6 +17,7 @@ const SORT_FILTERS = [
 
 export default function LiveValuationFeed() {
   const feed = useValuationFeed();
+  const properties = feed.properties ?? [];
 
   return (
     <section id="live-feed" className="py-20 px-4">
@@ -62,7 +63,11 @@ export default function LiveValuationFeed() {
             {CITY_FILTERS.map((c) => (
               <button key={c}
                 onClick={() => feed.updateFilter("city", c)}
-                className={cn("px-3 py-1 rounded-lg text-xs font-medium transition-all border", feed.filters.city === c ? "bg-blue-600/20 border-blue-500/50 text-blue-300" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-accent)]")}>
+                className={cn("px-3 py-1 rounded-lg text-xs font-medium transition-all border",
+                  feed.filters.city === c
+                    ? "bg-blue-600/20 border-blue-500/50 text-blue-300"
+                    : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-accent)]"
+                )}>
                 {c === "all" ? "All Cities" : c}
               </button>
             ))}
@@ -71,7 +76,11 @@ export default function LiveValuationFeed() {
             {ZONE_FILTERS.map((z) => (
               <button key={z}
                 onClick={() => feed.updateFilter("zoningType", z)}
-                className={cn("px-3 py-1 rounded-lg text-xs font-medium transition-all border", feed.filters.zoningType === z ? "bg-blue-600/20 border-blue-500/50 text-blue-300" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-accent)]")}>
+                className={cn("px-3 py-1 rounded-lg text-xs font-medium transition-all border",
+                  feed.filters.zoningType === z
+                    ? "bg-blue-600/20 border-blue-500/50 text-blue-300"
+                    : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-accent)]"
+                )}>
                 {z === "all" ? "All Zones" : z}
               </button>
             ))}
@@ -80,7 +89,11 @@ export default function LiveValuationFeed() {
             {SORT_FILTERS.map((s) => (
               <button key={s.value}
                 onClick={() => feed.updateFilter("sort", s.value)}
-                className={cn("px-3 py-1 rounded-lg text-xs font-medium transition-all border", feed.filters.sort === s.value ? "bg-emerald-600/20 border-emerald-500/50 text-emerald-300" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-accent)]")}>
+                className={cn("px-3 py-1 rounded-lg text-xs font-medium transition-all border",
+                  feed.filters.sort === s.value
+                    ? "bg-emerald-600/20 border-emerald-500/50 text-emerald-300"
+                    : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-accent)]"
+                )}>
                 {s.label}
               </button>
             ))}
@@ -96,7 +109,7 @@ export default function LiveValuationFeed() {
         )}
 
         {/* Loading */}
-        {feed.isLoading && feed.properties.length === 0 && (
+        {feed.isLoading && properties.length === 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
@@ -108,7 +121,7 @@ export default function LiveValuationFeed() {
         )}
 
         {/* Empty state */}
-        {!feed.isLoading && !feed.error && (feed.properties ?? []).length === 0 && (
+        {!feed.isLoading && !feed.error && properties.length === 0 && (
           <div className="text-center py-20 flex flex-col items-center gap-4">
             <span className="text-6xl opacity-20">🏗️</span>
             <p className="text-lg font-semibold text-[var(--text-secondary)]">No valuations yet</p>
@@ -119,16 +132,16 @@ export default function LiveValuationFeed() {
         )}
 
         {/* Grid view */}
-        {feed.viewMode === "grid" && (feed.properties. ?? []).length > 0 && (
+        {feed.viewMode === "grid" && properties.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(feed.properties ?? []).map((p, i) => (
+            {properties.map((p, i) => (
               <PropertyCard key={p._id} property={p} index={i} />
             ))}
           </div>
         )}
 
         {/* Table view */}
-        {feed.viewMode === "table" && (feed.properties ?? []).length > 0 && (
+        {feed.viewMode === "table" && properties.length > 0 && (
           <>
             <div className="hidden md:block glass rounded-xl overflow-hidden">
               <table className="w-full text-sm">
@@ -140,7 +153,7 @@ export default function LiveValuationFeed() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(feed.properties ?? []).map((p, i) => (
+                  {properties.map((p, i) => (
                     <tr key={p._id} className={cn("border-b border-[var(--border-subtle)] hover:bg-blue-500/5 transition-colors", i % 2 === 0 ? "" : "bg-white/[0.015]")}>
                       <td className="px-4 py-3 font-geist-mono text-blue-400 text-xs">{p.surveyNumber}</td>
                       <td className="px-4 py-3">
@@ -160,18 +173,17 @@ export default function LiveValuationFeed() {
                 </tbody>
               </table>
             </div>
-            {/* Mobile fallback for table view */}
             <div className="md:hidden grid grid-cols-1 gap-4">
-              {(feed.properties ?? []).map((p, i) => <PropertyCard key={p._id} property={p} index={i} />)}
+              {properties.map((p, i) => <PropertyCard key={p._id} property={p} index={i} />)}
             </div>
           </>
         )}
 
         {/* Load more */}
-        {(feed.properties ?? []).length > 0 && (
+        {properties.length > 0 && (
           <div className="flex flex-col items-center gap-3 mt-8">
             <p className="text-xs text-[var(--text-muted)]">
-              Showing {feed.properties.length} of {feed.total} properties
+              Showing {properties.length} of {feed.total} properties
             </p>
             {feed.hasMore ? (
               <Button variant="outline" onClick={feed.loadMore} isLoading={feed.isLoading}>
