@@ -36,7 +36,7 @@ export async function analyzeProperty(
   imageMimeType?: string
 ): Promise<PropertyValuation> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     const prompt = `You are a senior industrial property valuation expert in India with 20 years of experience in Maharashtra real estate markets (Nashik, Mumbai, Pune industrial corridors).
 
