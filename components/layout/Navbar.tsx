@@ -46,7 +46,7 @@ export default function Navbar({
           </svg>
           <div className="flex flex-col leading-none">
             <span className="text-white font-bold text-base tracking-tight">ValuateAI</span>
-            <span className="text-[9px] text-[var(--text-muted)] tracking-wider">by TachyonByte</span>
+            <span className="text-[9px] text-[var(--text-muted)] tracking-wider">by Danny</span>
           </div>
         </a>
 

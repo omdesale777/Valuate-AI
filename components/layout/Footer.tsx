@@ -18,7 +18,7 @@ export default function Footer() {
               AI-powered property intelligence for India's industrial corridors.
             </p>
             <p className="text-xs text-[var(--text-muted)]">
-              © 2025 ValuateAI by TachyonByte Technologies
+              © 2025 ValuateAI
             </p>
           </div>
 
@@ -56,6 +56,7 @@ export default function Footer() {
 
         <div className="border-t border-[var(--border-subtle)] pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span className="text-xs text-[var(--text-muted)]">Built with ♥ in India 🇮🇳</span>
+          <span className="text-xs text-[var(--text-muted)]">Developer - Danny (Om Desale)</span>
           <span className="text-xs text-[var(--text-muted)]">v1.0.0 — Industrial Intelligence Platform</span>
         </div>
       </div>
