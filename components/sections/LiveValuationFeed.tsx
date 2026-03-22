@@ -108,7 +108,7 @@ export default function LiveValuationFeed() {
         )}
 
         {/* Empty state */}
-        {!feed.isLoading && !feed.error && feed.properties.length === 0 && (
+        {!feed.isLoading && !feed.error && (feed.properties ?? []).length === 0 && (
           <div className="text-center py-20 flex flex-col items-center gap-4">
             <span className="text-6xl opacity-20">🏗️</span>
             <p className="text-lg font-semibold text-[var(--text-secondary)]">No valuations yet</p>
@@ -119,16 +119,16 @@ export default function LiveValuationFeed() {
         )}
 
         {/* Grid view */}
-        {feed.viewMode === "grid" && feed.properties.length > 0 && (
+        {feed.viewMode === "grid" && (feed.properties. ?? []).length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {feed.properties.map((p, i) => (
+            {(feed.properties ?? []).map((p, i) => (
               <PropertyCard key={p._id} property={p} index={i} />
             ))}
           </div>
         )}
 
         {/* Table view */}
-        {feed.viewMode === "table" && feed.properties.length > 0 && (
+        {feed.viewMode === "table" && (feed.properties ?? []).length > 0 && (
           <>
             <div className="hidden md:block glass rounded-xl overflow-hidden">
               <table className="w-full text-sm">
@@ -140,7 +140,7 @@ export default function LiveValuationFeed() {
                   </tr>
                 </thead>
                 <tbody>
-                  {feed.properties.map((p, i) => (
+                  {(feed.properties ?? []).map((p, i) => (
                     <tr key={p._id} className={cn("border-b border-[var(--border-subtle)] hover:bg-blue-500/5 transition-colors", i % 2 === 0 ? "" : "bg-white/[0.015]")}>
                       <td className="px-4 py-3 font-geist-mono text-blue-400 text-xs">{p.surveyNumber}</td>
                       <td className="px-4 py-3">
@@ -162,13 +162,13 @@ export default function LiveValuationFeed() {
             </div>
             {/* Mobile fallback for table view */}
             <div className="md:hidden grid grid-cols-1 gap-4">
-              {feed.properties.map((p, i) => <PropertyCard key={p._id} property={p} index={i} />)}
+              {(feed.properties ?? []).map((p, i) => <PropertyCard key={p._id} property={p} index={i} />)}
             </div>
           </>
         )}
 
         {/* Load more */}
-        {feed.properties.length > 0 && (
+        {(feed.properties ?? []).length > 0 && (
           <div className="flex flex-col items-center gap-3 mt-8">
             <p className="text-xs text-[var(--text-muted)]">
               Showing {feed.properties.length} of {feed.total} properties
