@@ -58,7 +58,7 @@ export default function PropertyLookup({ onPrefillSurveyNumber }: Props) {
           viewport={{ once: true, margin: "-50px" }}
           transition={{ delay: 0.1 }}
         >
-          <GlassCard className="p-2 flex items-center gap-3" style={{ boxShadow: "0 0 0 1px rgba(59,130,246,0.2)" } as React.CSSProperties}>
+          <GlassCard className="p-2 flex items-center gap-3 ring-1 ring-blue-500/20">
             <Search className="w-5 h-5 text-[var(--text-muted)] ml-2 shrink-0" />
             <input
               type="text"
