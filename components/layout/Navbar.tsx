@@ -52,7 +52,7 @@ export default function Navbar({
 
         <div className="hidden lg:flex items-center gap-6 flex-1">
           {navLinks.map((link) => (
-            
+            <a
               key={link.label}
               href={link.href}
               onClick={link.onClick ? (e) => { e.preventDefault(); link.onClick?.(); } : undefined}
@@ -91,7 +91,7 @@ export default function Navbar({
         <div className="fixed inset-0 z-40 pt-16 bg-[#0a0a0a]/95 backdrop-blur-xl lg:hidden">
           <div className="flex flex-col p-6 gap-4">
             {navLinks.map((link) => (
-              
+              <a
                 key={link.label}
                 href={link.href}
                 onClick={(e) => {
