@@ -19,11 +19,11 @@ export async function GET(req: NextRequest) {
     if (city && city !== "all") filter.city = city;
     if (zoningType && zoningType !== "all") filter.zoningType = zoningType;
 
-    const sortMap: Record<string, Record<string, number>> = {
-      newest: { createdAt: -1 },
-      highest: { "valuation.estimatedValueINR": -1 },
-      grade: { "valuation.investmentGrade": 1 },
-    };
+    const sortMap: Record<string, Record<string, 1 | -1>> = {
+    newest: { createdAt: -1 },
+    highest: { "valuation.estimatedValueINR": -1 },
+    grade: { "valuation.investmentGrade": 1 },
+  };
     const sortObj = sortMap[sort] ?? { createdAt: -1 };
 
     const total = await Property.countDocuments(filter);

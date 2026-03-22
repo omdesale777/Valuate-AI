@@ -18,6 +18,7 @@ const defaultFormData: PropertyFormData = {
 };
 
 interface FormErrors {
+  [key: string]: string | undefined;
   surveyNumber?: string;
   city?: string;
   areaSqFt?: string;

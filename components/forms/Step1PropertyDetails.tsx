@@ -19,7 +19,7 @@ const OWNERSHIP_OPTIONS = ["Freehold", "Leasehold", "Government"];
 
 interface Props {
   formData: PropertyFormData;
-  formErrors: Record<string, string>;
+  formErrors: Record<string, string | undefined>;
   onUpdate: (field: keyof PropertyFormData, value: unknown) => void;
   onNext: () => void;
 }
