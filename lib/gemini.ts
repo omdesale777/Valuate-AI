@@ -37,7 +37,7 @@ export async function analyzeProperty(
   imageMimeType?: string
 ): Promise<PropertyValuation> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     const isRough = propertyData.isRoughEstimate || !propertyData.areaSqFt;
 
