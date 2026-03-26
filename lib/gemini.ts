@@ -19,15 +19,16 @@ const FALLBACK_VALUATION: PropertyValuation = {
 };
 
 interface PropertyData {
-  surveyNumber: string;
-  city: string;
+  surveyNumber?: string;
+  city?: string;
   locality?: string;
-  areaSqFt: number;
+  areaSqFt?: number;
   buildingAge?: number;
   numberOfFloors?: number;
   constructionQuality?: number;
   zoningType?: string;
   ownershipType?: string;
+  isRoughEstimate?: boolean;
 }
 
 export async function analyzeProperty(
@@ -36,16 +37,58 @@ export async function analyzeProperty(
   imageMimeType?: string
 ): Promise<PropertyValuation> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
 
-    const prompt = `You are a senior industrial property valuation expert in India with 20 years of experience in Maharashtra real estate markets (Nashik, Mumbai, Pune industrial corridors).
+    const isRough = propertyData.isRoughEstimate || !propertyData.areaSqFt;
+
+    const prompt = isRough
+      ? `You are a senior industrial property valuation expert in India with 20 years of experience in Maharashtra real estate (Nashik, Mumbai, Pune).
+
+A site photo has been submitted with GPS location data. Generate a ROUGH valuation estimate based primarily on the photo and location.
+
+AVAILABLE DATA:
+- City: ${propertyData.city || "Maharashtra (exact city unknown)"}
+- Locality: ${propertyData.locality || "Unknown"}
+- Area: Not provided — estimate from photo if possible
+- Zoning: Industrial (assumed)
+
+IMPORTANT: This is a rough estimate. Be honest about uncertainty. Use wide valuation ranges.
+
+MARKET CONTEXT (2024-25 Maharashtra industrial rates):
+- Nashik MIDC: Rs 800-2500/sqft
+- Pune industrial corridors: Rs 1500-4500/sqft
+- Mumbai suburban industrial: Rs 3000-8000/sqft
+
+TASKS:
+1. Visually estimate the property size from the photo
+2. Assess construction quality from visual cues
+3. Generate rough market value estimate in INR
+4. Provide wide valuation range (high uncertainty)
+5. Assign investment grade based on visual assessment
+6. Set confidence score LOW (20-50) since data is limited
+7. List 3-5 insights based purely on visual analysis
+8. Note any visible risk factors
+
+Respond ONLY with valid JSON, no markdown:
+{
+  "estimatedValueINR": number,
+  "valuationRangeLow": number,
+  "valuationRangeHigh": number,
+  "monthlyRentalINR": number,
+  "annualYieldPercent": number,
+  "investmentGrade": "A" or "B+" or "B" or "C" or "D",
+  "confidenceScore": number,
+  "aiInsights": ["string"],
+  "riskFlags": ["string"]
+}`
+      : `You are a senior industrial property valuation expert in India with 20 years of experience in Maharashtra real estate markets (Nashik, Mumbai, Pune industrial corridors).
 
 Analyze the following property and generate a precise market valuation.
 
 PROPERTY DATA:
-- Survey Number: ${propertyData.surveyNumber}
-- City: ${propertyData.city}${propertyData.locality ? ", " + propertyData.locality : ""}
-- Total Area: ${propertyData.areaSqFt} sq ft (${Math.round(propertyData.areaSqFt * 0.0929)} sq m)
+- Survey Number: ${propertyData.surveyNumber || "Not provided"}
+- City: ${propertyData.city || "Maharashtra"}${propertyData.locality ? ", " + propertyData.locality : ""}
+- Total Area: ${propertyData.areaSqFt} sq ft (${Math.round((propertyData.areaSqFt || 0) * 0.0929)} sq m)
 - Building Age: ${propertyData.buildingAge ?? "Unknown"} years
 - Floors: ${propertyData.numberOfFloors ?? 1}
 - Self-Rated Quality: ${propertyData.constructionQuality ?? "Not rated"}/5
@@ -53,21 +96,11 @@ PROPERTY DATA:
 - Ownership: ${propertyData.ownershipType ?? "Freehold"}
 
 MARKET CONTEXT (2024-25 Maharashtra industrial rates):
-- Nashik MIDC: ₹800–2,500/sqft
-- Pune industrial corridors: ₹1,500–4,500/sqft
-- Mumbai suburban industrial: ₹3,000–8,000/sqft
+- Nashik MIDC: Rs 800-2500/sqft
+- Pune industrial corridors: Rs 1500-4500/sqft
+- Mumbai suburban industrial: Rs 3000-8000/sqft
 
-TASKS:
-1. Estimate current market value in INR. Be precise and realistic.
-2. Provide a valuation range (low/high).
-3. Estimate monthly rental value.
-4. Calculate annual rental yield as percentage.
-5. Assign investment grade: A (excellent ROI, prime location), B+ (good), B (fair), C (below average), D (distressed).
-6. Confidence score 0-100 based on data completeness.
-7. List 4-6 specific, actionable insights about this property.
-8. List any risk flags (or empty array if none).
-
-Respond ONLY with valid JSON, no markdown, no explanation:
+Respond ONLY with valid JSON, no markdown:
 {
   "estimatedValueINR": number,
   "valuationRangeLow": number,
@@ -93,16 +126,10 @@ Respond ONLY with valid JSON, no markdown, no explanation:
 
     const result = await model.generateContent(parts);
     const text = result.response.text();
-
-    // Strip markdown fences if present
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed = JSON.parse(cleaned) as PropertyValuation;
 
-    // Validate required fields
-    if (
-      typeof parsed.estimatedValueINR !== "number" ||
-      typeof parsed.investmentGrade !== "string"
-    ) {
+    if (typeof parsed.estimatedValueINR !== "number" || typeof parsed.investmentGrade !== "string") {
       throw new Error("Invalid Gemini response structure");
     }
 
