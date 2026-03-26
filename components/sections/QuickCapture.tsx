@@ -8,8 +8,7 @@ import {
   CheckCircle2, Clock, Crosshair, BarChart3
 } from "lucide-react";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { Button, GlassCard } from "@/components/ui/index";
-import { FormField, TextInput, SelectInput } from "@/components/ui/FormComponents";
+import { Button } from "@/components/ui/index";
 import { useToast } from "@/components/ui/Toast";
 import { Coordinates, Property } from "@/types";
 import ValuationResultCard from "@/components/cards/ValuationResultCard";
@@ -19,12 +18,6 @@ interface Props {
 }
 
 type CaptureStep = "idle" | "capturing" | "form" | "submitting" | "result";
-
-const CITY_OPTIONS = [
-  { value: "Nashik", label: "🏭 Nashik" },
-  { value: "Mumbai", label: "🌆 Mumbai" },
-  { value: "Pune", label: "🏙️ Pune" },
-];
 
 const FEATURES = [
   {
@@ -71,7 +64,11 @@ const stagger = {
   },
   item: {
     hidden: { opacity: 0, y: 24 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] } },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
+    },
   },
 };
 
@@ -83,9 +80,6 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
   const [step, setStep] = useState<CaptureStep>("idle");
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const [previewURL, setPreviewURL] = useState<string | null>(null);
-  const [surveyNumber, setSurveyNumber] = useState("");
-  const [city, setCity] = useState("");
-  const [areaSqFt, setAreaSqFt] = useState("");
   const [result, setResult] = useState<Property | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,37 +100,60 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
   };
 
   const handleSubmit = async () => {
-    if (!surveyNumber || !city || !areaSqFt) {
-      addToast("Please fill in all required fields", "error");
+    if (!capturedFile) {
+      addToast("Please capture a site photo first", "error");
       return;
     }
+
     setStep("submitting");
     setError(null);
 
     try {
+      // Upload image
       let siteImageURL: string | undefined;
-      if (capturedFile) {
-        const fd = new FormData();
-        fd.append("file", capturedFile);
-        const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
-        if (uploadRes.ok) {
-          const { url } = await uploadRes.json();
-          siteImageURL = url;
-        }
+      const fd = new FormData();
+      fd.append("file", capturedFile);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+      if (uploadRes.ok) {
+        const { url } = await uploadRes.json();
+        siteImageURL = url;
       }
 
       const coords: Coordinates | undefined = geo.coordinates ?? undefined;
+
+      // Auto-detect city from reverse geocode address
+      let detectedCity = "Nashik"; // default
+      if (geo.address) {
+        const addr = geo.address.toLowerCase();
+        if (
+          addr.includes("mumbai") ||
+          addr.includes("thane") ||
+          addr.includes("navi mumbai")
+        ) {
+          detectedCity = "Mumbai";
+        } else if (
+          addr.includes("pune") ||
+          addr.includes("pimpri") ||
+          addr.includes("pcmc")
+        ) {
+          detectedCity = "Pune";
+        } else if (addr.includes("nashik")) {
+          detectedCity = "Nashik";
+        }
+      }
+
+      // Create property — no survey number or area needed
       const createRes = await fetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          surveyNumber: surveyNumber.toUpperCase(),
-          city,
-          areaSqFt: Number(areaSqFt),
+          city: detectedCity,
+          locality: geo.address || undefined,
           siteImageURL,
           coordinates: coords,
           zoningType: "Industrial",
           ownershipType: "Freehold",
+          isRoughEstimate: true,
         }),
       });
 
@@ -146,6 +163,7 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
       }
       const created = await createRes.json();
 
+      // Trigger rough valuation
       const valRes = await fetch("/api/valuation/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -165,13 +183,18 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
   const reset = () => {
     setStep("idle");
     setCapturedFile(null);
+    if (previewURL) URL.revokeObjectURL(previewURL);
     setPreviewURL(null);
-    setSurveyNumber("");
-    setCity("");
-    setAreaSqFt("");
     setResult(null);
     setError(null);
     geo.reset();
+  };
+
+  const clearPhoto = () => {
+    if (previewURL) URL.revokeObjectURL(previewURL);
+    setCapturedFile(null);
+    setPreviewURL(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
@@ -200,7 +223,7 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
           >
             {/* HERO */}
             <section className="relative min-h-screen flex flex-col items-center justify-center px-4 text-center overflow-hidden pt-16">
-              {/* Background */}
+              {/* Background blobs */}
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] rounded-full bg-blue-600/6 blur-[120px] animate-float" />
                 <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-emerald-600/5 blur-[100px] animate-float-delayed" />
@@ -236,11 +259,15 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
                   variants={stagger.item}
                   className="text-base sm:text-lg text-white/50 max-w-xl leading-relaxed"
                 >
-                  AI-Powered Property Valuation &amp; Future Prediction Platform with real-time analysis, AI predictions, and ROI calculations.
+                  AI-Powered Property Valuation &amp; Future Prediction Platform with
+                  real-time analysis, AI predictions, and ROI calculations.
                 </motion.p>
 
                 {/* Feature pills */}
-                <motion.div variants={stagger.item} className="flex flex-wrap justify-center gap-2">
+                <motion.div
+                  variants={stagger.item}
+                  className="flex flex-wrap justify-center gap-2"
+                >
                   {["Real-time Analysis", "AI Predictions", "ROI Calculator"].map((pill) => (
                     <span
                       key={pill}
@@ -252,7 +279,10 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
                 </motion.div>
 
                 {/* CTAs */}
-                <motion.div variants={stagger.item} className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <motion.div
+                  variants={stagger.item}
+                  className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"
+                >
                   <button
                     onClick={handleCapture}
                     className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-white text-black font-semibold text-sm hover:bg-white/90 active:scale-95 transition-all duration-200"
@@ -270,10 +300,7 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
                 </motion.div>
 
                 {/* Scroll indicator */}
-                <motion.div
-                  variants={stagger.item}
-                  className="flex flex-col items-center gap-2 mt-4"
-                >
+                <motion.div variants={stagger.item} className="flex flex-col items-center gap-2 mt-4">
                   <ChevronDown className="w-5 h-5 text-white/20 animate-bounce" />
                 </motion.div>
               </motion.div>
@@ -289,10 +316,16 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.08, duration: 0.5 }}
-                    className={`flex flex-col items-center gap-1 text-center ${i > 0 ? "sm:border-l sm:border-white/5" : ""}`}
+                    className={`flex flex-col items-center gap-1 text-center ${
+                      i > 0 ? "sm:border-l sm:border-white/5" : ""
+                    }`}
                   >
-                    <span className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{stat.value}</span>
-                    <span className="text-xs text-white/35 uppercase tracking-widest">{stat.label}</span>
+                    <span className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                      {stat.value}
+                    </span>
+                    <span className="text-xs text-white/35 uppercase tracking-widest">
+                      {stat.label}
+                    </span>
                   </motion.div>
                 ))}
               </div>
@@ -307,9 +340,12 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
                   viewport={{ once: true }}
                   className="text-center mb-12"
                 >
-                  <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">System Features</h2>
+                  <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+                    System Features
+                  </h2>
                   <p className="text-white/40 max-w-lg mx-auto text-sm sm:text-base">
-                    Experience the next generation of property valuation with our comprehensive suite of intelligent features.
+                    Experience the next generation of property valuation with our
+                    comprehensive suite of intelligent features.
                   </p>
                 </motion.div>
 
@@ -328,7 +364,7 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
                         variants={stagger.item}
                         className={`flex flex-col gap-4 p-5 rounded-2xl border ${f.bg} backdrop-blur-sm hover:-translate-y-1 transition-transform duration-300`}
                       >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-white/5`}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/5">
                           <Icon className={`w-5 h-5 ${f.color}`} />
                         </div>
                         <div>
@@ -351,15 +387,34 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
                   viewport={{ once: true }}
                   className="text-center mb-12"
                 >
-                  <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">How It Works</h2>
-                  <p className="text-white/40 text-sm sm:text-base">Three steps to a complete industrial property valuation</p>
+                  <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+                    How It Works
+                  </h2>
+                  <p className="text-white/40 text-sm sm:text-base">
+                    Three steps to a complete industrial property valuation
+                  </p>
                 </motion.div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
                   {[
-                    { step: "01", icon: Camera, title: "Capture Site", desc: "Open camera, click a photo of the property. GPS auto-captures your location." },
-                    { step: "02", icon: BrainCircuit, title: "AI Analyzes", desc: "Gemini AI analyzes the photo, location, and market data for Maharashtra industrial zones." },
-                    { step: "03", icon: BarChart3, title: "Get Valuation", desc: "Receive estimated market value, rental yield, investment grade, and risk flags instantly." },
+                    {
+                      step: "01",
+                      icon: Camera,
+                      title: "Capture Site",
+                      desc: "Open camera, click a photo of the property. GPS auto-captures your location.",
+                    },
+                    {
+                      step: "02",
+                      icon: BrainCircuit,
+                      title: "AI Analyzes",
+                      desc: "Gemini AI analyzes the photo, location, and market data for Maharashtra industrial zones.",
+                    },
+                    {
+                      step: "03",
+                      icon: BarChart3,
+                      title: "Get Valuation",
+                      desc: "Receive estimated market value, rental yield, investment grade, and risk flags instantly.",
+                    },
                   ].map((item, i) => {
                     const Icon = item.icon;
                     return (
@@ -375,7 +430,9 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
                           <div className="hidden sm:block absolute top-5 left-[calc(100%+8px)] w-[calc(100%-16px)] h-px bg-gradient-to-r from-white/10 to-transparent" />
                         )}
                         <div className="flex items-center gap-3">
-                          <span className="text-xs font-mono text-white/20 font-bold">{item.step}</span>
+                          <span className="text-xs font-mono text-white/20 font-bold">
+                            {item.step}
+                          </span>
                           <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/8 flex items-center justify-center">
                             <Icon className="w-5 h-5 text-white/60" />
                           </div>
@@ -408,7 +465,8 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
                     Ready to value your property?
                   </h2>
                   <p className="text-white/40 text-sm max-w-md">
-                    Point your camera at any industrial property in Nashik, Mumbai, or Pune and get an AI valuation in under 30 seconds.
+                    Point your camera at any industrial property in Nashik, Mumbai, or
+                    Pune and get an AI valuation in under 30 seconds.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <button
@@ -443,17 +501,24 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
           >
             <div className="relative w-16 h-16">
               <div className="absolute inset-0 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
-              <div className="absolute inset-2 rounded-full border-2 border-emerald-500/30 border-b-emerald-500 animate-spin" style={{ animationDirection: "reverse" }} />
+              <div
+                className="absolute inset-2 rounded-full border-2 border-emerald-500/30 border-b-emerald-500 animate-spin"
+                style={{ animationDirection: "reverse" }}
+              />
             </div>
             <div>
               <p className="text-white font-semibold text-lg">Requesting Access...</p>
-              <p className="text-white/40 text-sm mt-1">Allow camera and location when prompted</p>
+              <p className="text-white/40 text-sm mt-1">
+                Allow camera and location when prompted
+              </p>
             </div>
-            <Button variant="ghost" size="sm" onClick={reset}>Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={reset}>
+              Cancel
+            </Button>
           </motion.div>
         )}
 
-        {/* ─── FORM ────────────────────────────────────────────────── */}
+        {/* ─── FORM: Photo only, no input fields ───────────────────── */}
         {step === "form" && (
           <motion.div
             key="form"
@@ -463,81 +528,117 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
             className="min-h-screen flex items-center justify-center px-4 py-20"
           >
             <div className="w-full max-w-lg flex flex-col gap-5">
+              {/* Header */}
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white">Quick Details</h2>
-                <button onClick={reset} className="text-white/30 hover:text-white transition-colors">
+                <h2 className="text-xl font-bold text-white">Site Capture</h2>
+                <button
+                  onClick={reset}
+                  className="text-white/30 hover:text-white transition-colors"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Photo preview */}
-              {previewURL && (
-                <div className="relative rounded-xl overflow-hidden h-44">
-                  <img src={previewURL} alt="Site" className="w-full h-full object-cover" />
-                  <div className="absolute bottom-0 left-0 right-0 bg-emerald-500/80 backdrop-blur-sm py-1.5 text-center text-xs text-white font-medium">
-                    📸 Site Photo Captured ✓
-                  </div>
+              {/* Location alert */}
+              <div
+                className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-sm ${
+                  geo.permissionState === "granted"
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                    : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                }`}
+              >
+                <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-0.5">
+                  {geo.permissionState === "granted" && geo.coordinates ? (
+                    <>
+                      <span className="font-medium">📍 Location Captured</span>
+                      <span className="text-xs opacity-75 font-mono">
+                        {geo.address ||
+                          `${geo.coordinates.lat.toFixed(4)}°N, ${geo.coordinates.lon.toFixed(4)}°E`}
+                      </span>
+                    </>
+                  ) : geo.permissionState === "denied" ? (
+                    <>
+                      <span className="font-medium">⚠️ Location Access Denied</span>
+                      <span className="text-xs opacity-75">
+                        Valuation will be less accurate without GPS. Enable location in
+                        browser settings and retry.
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium">📍 Enable Location First</span>
+                      <span className="text-xs opacity-75">
+                        Please allow location access when prompted for accurate valuation.
+                      </span>
+                    </>
+                  )}
                 </div>
-              )}
-
-              {/* Location */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-                geo.permissionState === "granted"
-                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-                  : "bg-amber-500/10 border border-amber-500/20 text-amber-400"
-              }`}>
-                <MapPin className="w-4 h-4 shrink-0" />
-                {geo.permissionState === "granted" && geo.coordinates
-                  ? <span className="font-mono text-xs">{geo.address || `${geo.coordinates.lat.toFixed(4)}°N, ${geo.coordinates.lon.toFixed(4)}°E`}</span>
-                  : <span className="text-xs">Location not captured — valuation uses city-level data</span>
-                }
               </div>
 
-              {/* Fields */}
-              <FormField label="Survey Number" required>
-                <TextInput
-                  value={surveyNumber}
-                  onChange={(v) => setSurveyNumber(v.toUpperCase())}
-                  placeholder="e.g. MH-NK-2024-0087"
-                  mono
-                />
-              </FormField>
-
-              <FormField label="City" required>
-                <SelectInput
-                  value={city}
-                  onChange={setCity}
-                  options={CITY_OPTIONS}
-                  placeholder="Select city..."
-                />
-              </FormField>
-
-              <FormField label="Total Area (sq ft)" required>
-                <TextInput
-                  value={areaSqFt}
-                  onChange={setAreaSqFt}
-                  placeholder="e.g. 5000"
-                  type="number"
-                />
-              </FormField>
-
-              {error && (
-                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>
+              {/* Photo area */}
+              {previewURL ? (
+                <div className="relative rounded-xl overflow-hidden h-56">
+                  <img
+                    src={previewURL}
+                    alt="Site"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-emerald-500/80 backdrop-blur-sm py-2 text-center text-xs text-white font-medium">
+                    📸 Site Photo Captured ✓
+                  </div>
+                  <button
+                    onClick={clearPhoto}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-48 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-3 text-white/30 hover:border-white/20 hover:text-white/50 transition-all"
+                >
+                  <Camera className="w-10 h-10" />
+                  <div className="text-center">
+                    <p className="text-sm font-medium">Tap to open camera</p>
+                    <p className="text-xs mt-0.5">or upload a photo</p>
+                  </div>
+                </button>
               )}
 
+              {/* Info note */}
+              <div className="flex items-start gap-2 text-xs text-white/30">
+                <Crosshair className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>
+                  No manual input needed. AI will estimate the property value from your
+                  photo and GPS location. This is a rough estimate — use full form for
+                  precise valuation.
+                </span>
+              </div>
+
+              {error && (
+                <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              {/* Submit */}
               <button
                 onClick={handleSubmit}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-white text-black font-semibold text-sm hover:bg-white/90 active:scale-95 transition-all"
+                disabled={!capturedFile}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-white text-black font-semibold text-sm hover:bg-white/90 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <Zap className="w-4 h-4" />
-                Generate AI Valuation
+                {capturedFile ? "Generate Rough Valuation" : "Upload Photo First"}
               </button>
 
+              {/* Switch to full form */}
               <button
                 onClick={onSwitchToManual}
                 className="text-xs text-center text-white/30 hover:text-white/60 transition-colors"
               >
-                Need more details? Switch to full form →
+                Want precise valuation? Switch to full form →
               </button>
             </div>
           </motion.div>
@@ -554,12 +655,16 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
           >
             <div className="relative w-16 h-16">
               <div className="absolute inset-0 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
-              <div className="absolute inset-2 rounded-full border-2 border-emerald-500/30 border-b-emerald-500 animate-spin"
-                style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
+              <div
+                className="absolute inset-2 rounded-full border-2 border-emerald-500/30 border-b-emerald-500 animate-spin"
+                style={{ animationDirection: "reverse", animationDuration: "1.5s" }}
+              />
             </div>
             <div>
               <p className="text-white font-semibold text-lg">Analyzing Property...</p>
-              <p className="text-white/40 text-sm mt-1">Gemini AI is computing the valuation</p>
+              <p className="text-white/40 text-sm mt-1">
+                Gemini AI is computing the valuation
+              </p>
             </div>
           </motion.div>
         )}
@@ -573,7 +678,15 @@ export default function QuickCapture({ onSwitchToManual }: Props) {
             className="min-h-screen flex items-center justify-center px-4 py-20"
           >
             <div className="w-full max-w-lg flex flex-col gap-4">
+              {/* Rough estimate disclaimer */}
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs">
+                <Clock className="w-3.5 h-3.5 shrink-0" />
+                Rough estimate based on site photo and GPS location. Switch to full form
+                for precise valuation.
+              </div>
+
               <ValuationResultCard property={result} onReset={reset} />
+
               <button
                 onClick={onSwitchToManual}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 text-white/50 text-sm hover:bg-white/5 transition-all"

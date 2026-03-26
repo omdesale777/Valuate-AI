@@ -7,12 +7,15 @@ export async function POST(req: NextRequest) {
   try {
     await connectDB();
     const { propertyId } = await req.json();
-    if (!propertyId) return NextResponse.json({ error: "propertyId required" }, { status: 400 });
+    if (!propertyId) {
+      return NextResponse.json({ error: "propertyId required" }, { status: 400 });
+    }
 
     const property = await Property.findById(propertyId);
-    if (!property) return NextResponse.json({ error: "Property not found" }, { status: 404 });
+    if (!property) {
+      return NextResponse.json({ error: "Property not found" }, { status: 404 });
+    }
 
-    // Optionally fetch image as base64
     let imageBase64: string | undefined;
     let imageMimeType: string | undefined;
 
@@ -22,23 +25,28 @@ export async function POST(req: NextRequest) {
         const buffer = await imgRes.arrayBuffer();
         imageBase64 = Buffer.from(buffer).toString("base64");
         const ext = property.siteImageURL.split(".").pop()?.toLowerCase() ?? "jpeg";
-        imageMimeType = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+        imageMimeType =
+          ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
       } catch {
         // proceed without image
       }
     }
+
+    // Detect rough estimate mode
+    const isRoughEstimate = property.areaSqFt <= 1;
 
     const valuation = await analyzeProperty(
       {
         surveyNumber: property.surveyNumber,
         city: property.city,
         locality: property.locality,
-        areaSqFt: property.areaSqFt,
+        areaSqFt: isRoughEstimate ? undefined : property.areaSqFt,
         buildingAge: property.buildingAge,
         numberOfFloors: property.numberOfFloors,
         constructionQuality: property.constructionQuality,
         zoningType: property.zoningType,
         ownershipType: property.ownershipType,
+        isRoughEstimate,
       },
       imageBase64,
       imageMimeType
@@ -48,7 +56,7 @@ export async function POST(req: NextRequest) {
     property.status = valuation.estimatedValueINR > 0 ? "verified" : "pending";
     await property.save();
 
-    return NextResponse.json(property);
+    return NextResponse.json({ ...property.toObject(), isRoughEstimate });
   } catch (err) {
     console.error("POST /api/valuation/analyze:", err);
     return NextResponse.json({ error: "Valuation failed" }, { status: 500 });
