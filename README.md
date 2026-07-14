@@ -27,32 +27,6 @@ Point your camera at a site, let GPS lock your location, and get a comprehensive
 
 ---
 
-## Features
-
-### 🎯 Two Modes of Operation
-- **Quick Capture** — Open camera + auto GPS on landing. Click a photo, confirm 3 fields, get your valuation in under 30 seconds
-- **Manual Entry** — Full detailed form with survey number, building age, construction quality, zoning, and more
-
-### 🤖 AI Valuation Engine
-- Google Gemini AI analyzes site photos for construction quality, structural condition, and surroundings
-- Generates estimated market value in INR (city-calibrated Maharashtra rates)
-- Provides investment grade (A / B+ / B / C / D), rental yield, and confidence score
-- Lists actionable insights and risk flags per property
-
-### 🗺️ Neighborhood Intelligence
-- OpenStreetMap Overpass API fetches nearby banks, hospitals, schools, and transport
-- Composite connectivity score (0–100) based on amenity density
-- Distance to each amenity in meters/km
-
-### 📊 Live Valuation Feed
-- Real-time syncing dashboard (30s polling via SWR)
-- Grid and table views with city/zone/sort filters
-- New valuation notifications
-
-### 🔍 Remote Property Lookup
-- Search by survey number or property ID
-- Instant results with full valuation data
-- Pre-fill form from lookup results
 
 ---
 
